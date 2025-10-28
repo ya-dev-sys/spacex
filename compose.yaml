@@ -1,0 +1,55 @@
+services:
+  backend:
+    build: .
+    container_name: spacex-backend
+    env_file: .env
+    depends_on:
+      - db
+      - redis
+    ports:
+      - '${SERVER_PORT}:8080'
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILE}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_REDIS_HOST: ${SPRING_REDIS_HOST}
+      SPRING_REDIS_PORT: ${SPRING_REDIS_PORT}
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - spacex_net
+
+  db:
+    image: postgres:16-alpine
+    container_name: spacex-db
+    restart: always
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - '${POSTGRES_PORT}:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - spacex_net
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: spacex-redis
+    ports:
+      - '${REDIS_PORT}:6379'
+    volumes:
+      - redis_data:/data
+    networks:
+      - spacex_net
+
+networks:
+  spacex_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
