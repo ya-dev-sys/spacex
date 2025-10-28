@@ -1,16 +1,13 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/spacex_dashboard
-    username: spacex
-    password: secret123
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/spacex_dashboard}
+    username: ${POSTGRES_USER:spacex}
+    password: ${POSTGRES_PASSWORD:secret123}
+    driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
       ddl-auto: create-drop
     show-sql: true
 
   cache:
-    type: redis
-  data:
-    redis:
-      host: localhost
-      port: 6379
+    type: none # Désactive le cache pour les tests
