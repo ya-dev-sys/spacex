@@ -9,6 +9,32 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: spacex
+          POSTGRES_PASSWORD: secret123
+          POSTGRES_DB: spacex_dashboard
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7.4-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@v4
@@ -20,8 +46,50 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Cache Maven packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
+      - name: Check code style
+        run: ./mvnw checkstyle:check
+
       - name: Build with Maven
         run: ./mvnw clean verify
+        env:
+          SPRING_PROFILES_ACTIVE: test
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/spacex_dashboard
+          POSTGRES_USER: spacex
+          POSTGRES_PASSWORD: secret123
+          SPRING_REDIS_HOST: localhost
+          SPRING_REDIS_PORT: 6379
 
-      - name: Run tests
-        run: ./mvnw test
+      - name: Run tests with coverage
+        run: ./mvnw test jacoco:report
+        env:
+          SPRING_PROFILES_ACTIVE: test
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/spacex_dashboard
+          POSTGRES_USER: spacex
+          POSTGRES_PASSWORD: secret123
+          SPRING_REDIS_HOST: localhost
+          SPRING_REDIS_PORT: 6379
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: |
+            target/surefire-reports
+            target/site/jacoco
+          retention-days: 7
+
+      - name: Check test coverage
+        run: |
+          COVERAGE=$(cat target/site/jacoco/index.html | grep -o 'Total[^%]*%' | grep -o '[0-9.]*')
+          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+            echo "Test coverage $COVERAGE% is below 80%"
+            exit 1
+          fi
