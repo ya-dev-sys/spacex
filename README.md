@@ -39,22 +39,111 @@ cp .env.example .env
 docker compose up -d
 ```
 
-## Endpoints
+## Architecture
 
-- `POST /auth/login` - Authentification
-- `GET /dashboard/kpis` - KPIs globaux
-- `GET /dashboard/stats/yearly` - Stats par année
-- `GET /dashboard/launches` - Liste des lancements
-- `POST /admin/resync` - Resync avec l'API SpaceX (admin)
+### Base de données
 
-## Développement
+- PostgreSQL pour le stockage permanent
+- Redis pour le cache des données SpaceX
+- Migrations automatiques via Hibernate
 
-```bash
-./mvnw spring-boot:run
+### Sécurité
+
+- JWT pour l'authentification
+- Rôles hiérarchiques (ADMIN > USER)
+- Durée de validité des tokens : 24h
+
+### Cache
+
+- Mise en cache des données SpaceX
+- Invalidation automatique après 1h
+- Possibilité de forcer la resync via l'API admin
+
+## Comptes de test
+
+### Administrateur
+
+```
+email: admin@example.com
+password: admin123
+roles: ADMIN, USER
 ```
 
-## Tests
+### Utilisateur standard
+
+```
+username: user@example.com
+password: user123
+roles: USER
+```
+
+## API Endpoints détaillés
+
+### Authentification
+
+```
+POST /auth/login
+Body: {
+    "email": "string",
+    "password": "string"
+}
+Response: {
+    "token": "string",
+    "type": "Bearer"
+}
+```
+
+### Dashboard
+
+```
+GET /dashboard/kpis
+Header: Authorization: Bearer {token}
+Response: {
+    "totalLaunches": number,
+    "successRate": number,
+    "nextLaunch": object
+}
+```
+
+### Admin
+
+```
+POST /admin/resync
+Header: Authorization: Bearer {token}
+Response: {
+    "success": boolean,
+    "launchesProcessed": number
+}
+```
+
+## Commandes utiles
+
+### Génération d'un nouveau token JWT
 
 ```bash
-./mvnw test
+curl -X POST http://localhost:8080/auth/login \
+-H "Content-Type: application/json" \
+-d '{"email":"admin@example.com","password":"admin123"}'
 ```
+
+### Forcer une resync (ADMIN)
+
+```bash
+curl -X POST http://localhost:8080/admin/resync \
+-H "Authorization: Bearer {votre-token}"
+```
+
+## Logs
+
+Les logs sont stockés dans :
+
+- Console (développement)
+- /logs/spacex-backend.log (production)
+- /logs/archived/ (historique)
+
+## Monitoring
+
+Endpoints Actuator disponibles :
+
+- /actuator/health - État du système
+- /actuator/info - Informations de l'application
