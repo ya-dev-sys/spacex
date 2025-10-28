@@ -1,0 +1,13 @@
+target/
+.mvn/
+*.log
+.git/
+.github/
+.idea/
+.vscode/
+*.md
+.env
+.env.*
+compose*.yml
+Dockerfile
+.dockerignore

@@ -9,7 +9,7 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.spacex</groupId>
-    <artifactId>laucncher</artifactId>
+    <artifactId>launcher</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>spacex</name>
     <description>spacex</description>

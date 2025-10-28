@@ -1,6 +1,7 @@
 services:
   backend:
     build: .
+    dockerfile: Dockerfile
     container_name: spacex-backend
     env_file: .env
     depends_on:
