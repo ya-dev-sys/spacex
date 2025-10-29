@@ -22,7 +22,7 @@ Backend REST API pour suivre les lancements SpaceX en temps réel.
 1. Cloner le repo :
 
 ```bash
-git clone https://github.com/votre-username/spacex.git
+git clone https://github.com/ya-dev-sys/spacex.git
 cd spacex
 ```
 
@@ -30,120 +30,108 @@ cd spacex
 
 ```bash
 cp .env.example .env
-# Éditer .env avec vos valeurs
 ```
 
-3. Lancer avec Docker :
+Éditez le fichier `.env` avec vos propres valeurs :
+
+- `SERVER_PORT` : Port du serveur backend (défaut: 8080)
+- `POSTGRES_USER` : Utilisateur PostgreSQL (ex: spacex)
+- `POSTGRES_PASSWORD` : Mot de passe PostgreSQL (choisir un mot de passe fort)
+- `POSTGRES_DB` : Nom de la base de données (ex: spacex_dashboard)
+- `JWT_SECRET` : Clé secrète pour JWT (au moins 256 bits / 32 caractères)
+
+3. Installation avec Docker (recommandé) :
 
 ```bash
+# Construire et démarrer les conteneurs
 docker compose up -d
+
+# Vérifier les logs
+docker compose logs -f backend
+
+# Pour arrêter
+docker compose down
+
+# Pour supprimer toutes les données (volumes)
+docker compose down -v
 ```
 
-## Architecture
+4. Installation locale (sans Docker) :
 
-### Base de données
+Prérequis:
 
-- PostgreSQL pour le stockage permanent
-- Redis pour le cache des données SpaceX
-- Migrations automatiques via Hibernate
-
-### Sécurité
-
-- JWT pour l'authentification
-- Rôles hiérarchiques (ADMIN > USER)
-- Durée de validité des tokens : 24h
-
-### Cache
-
-- Mise en cache des données SpaceX
-- Invalidation automatique après 1h
-- Possibilité de forcer la resync via l'API admin
-
-## Comptes de test
-
-### Administrateur
-
-```
-email: admin@example.com
-password: admin123
-roles: ADMIN, USER
-```
-
-### Utilisateur standard
-
-```
-username: user@example.com
-password: user123
-roles: USER
-```
-
-## API Endpoints détaillés
-
-### Authentification
-
-```
-POST /auth/login
-Body: {
-    "email": "string",
-    "password": "string"
-}
-Response: {
-    "token": "string",
-    "type": "Bearer"
-}
-```
-
-### Dashboard
-
-```
-GET /dashboard/kpis
-Header: Authorization: Bearer {token}
-Response: {
-    "totalLaunches": number,
-    "successRate": number,
-    "nextLaunch": object
-}
-```
-
-### Admin
-
-```
-POST /admin/resync
-Header: Authorization: Bearer {token}
-Response: {
-    "success": boolean,
-    "launchesProcessed": number
-}
-```
-
-## Commandes utiles
-
-### Génération d'un nouveau token JWT
+- Java 21 (JDK)
+- PostgreSQL 16
+- Redis 7.4
+- Maven 3.9+ (ou utilisez ./mvnw)
 
 ```bash
-curl -X POST http://localhost:8080/auth/login \
--H "Content-Type: application/json" \
--d '{"email":"admin@example.com","password":"admin123"}'
+# Installer PostgreSQL
+# Sur Ubuntu/Debian:
+sudo apt update
+sudo apt install postgresql-16
+
+# Démarrer PostgreSQL
+sudo systemctl start postgresql
+
+# Créer la base de données et l'utilisateur
+sudo -u postgres psql
+postgres=# CREATE DATABASE spacex_dashboard;
+postgres=# CREATE USER spacex WITH ENCRYPTED PASSWORD 'votre_mot_de_passe';
+postgres=# GRANT ALL PRIVILEGES ON DATABASE spacex_dashboard TO spacex;
+
+# Installer Redis
+# Sur Ubuntu/Debian:
+sudo apt install redis-server
+sudo systemctl start redis-server
+
+# Compiler et lancer l'application
+./mvnw clean package
+java -jar target/laucncher-0.0.1-SNAPSHOT.jar
 ```
 
-### Forcer une resync (ADMIN)
+5. Vérifier l'installation :
 
 ```bash
-curl -X POST http://localhost:8080/admin/resync \
--H "Authorization: Bearer {votre-token}"
+# L'API devrait être accessible sur:
+curl http://localhost:8080/actuator/health
+
+# Vous devriez voir:
+{"status":"UP"}
 ```
 
-## Logs
+6. Comptes par défaut :
 
-Les logs sont stockés dans :
+L'application crée automatiquement deux comptes :
 
-- Console (développement)
-- /logs/spacex-backend.log (production)
-- /logs/archived/ (historique)
+- Admin: `admin@example.com` / `admin123`
+- User: `user@example.com` / `user123`
 
-## Monitoring
+Changez ces mots de passe en production !
 
-Endpoints Actuator disponibles :
+7. En cas de problèmes :
 
-- /actuator/health - État du système
-- /actuator/info - Informations de l'application
+- Vérifiez les logs: `docker compose logs -f` ou `tail -f logs/spacex-backend.log`
+- Assurez-vous que tous les ports requis sont libres (8080, 5432, 6379)
+- Vérifiez les connexions PostgreSQL et Redis
+- En mode local, assurez-vous que votre JDK est bien Java 21+
+
+## Endpoints
+
+- `POST /auth/login` - Authentification
+- `GET /dashboard/kpis` - KPIs globaux
+- `GET /dashboard/stats/yearly` - Stats par année
+- `GET /dashboard/launches` - Liste des lancements
+- `POST /admin/resync` - Resync avec l'API SpaceX (admin)
+
+## Développement
+
+```bash
+./mvnw spring-boot:run
+```
+
+## Tests
+
+```bash
+./mvnw test
+```
